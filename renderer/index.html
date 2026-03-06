@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 守卫</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Language Picker Overlay (first launch) -->
+  <div class="lang-overlay hidden" id="lang-overlay">
+    <div class="lang-overlay-logo">🛡️</div>
+    <div class="lang-overlay-title" data-i18n="langOverlayTitle">Choose Language</div>
+    <div class="lang-overlay-sub" data-i18n="langOverlaySubtitle">Which language do you prefer?</div>
+    <div class="lang-buttons">
+      <button class="lang-btn" id="btn-zh">中文</button>
+      <button class="lang-btn" id="btn-en">EN</button>
+    </div>
+  </div>
+
+  <!-- Event detail drawer -->
+  <div class="detail-drawer hidden" id="detail-drawer">
+    <div class="detail-close" id="detail-close">✕</div>
+    <div class="detail-icon" id="detail-icon"></div>
+    <div>
+      <span class="detail-action" id="detail-action"></span>
+      <span class="detail-tool hidden" id="detail-tool"></span>
+    </div>
+    <div class="detail-text" id="detail-text"></div>
+    <div class="detail-input hidden" id="detail-input"></div>
+    <div class="detail-time" id="detail-time"></div>
+  </div>
+
+  <div class="titlebar"></div>
+
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo" id="header-logo">🛡️</div>
+      <div class="header-text">
+        <h1 data-i18n="appName">AI 守卫</h1>
+        <p class="subtitle">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">今天一切安全 ✓</span>
+        </p>
+      </div>
+      <button class="pause-btn" id="pause-btn" data-i18n="btnPause">暂停</button>
+    </div>
+
+    <!-- Stat card -->
+    <div class="stat-card">
+      <div class="stat">
+        <div class="stat-number" id="blocked-count">0</div>
+        <div class="stat-label" data-i18n="statBlockedLabel">今天拦截的危险操作</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-number" id="tools-count">0</div>
+        <div class="stat-label" data-i18n="statToolsLabel">守护中的 AI</div>
+      </div>
+    </div>
+
+    <!-- Protected tools -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title" data-i18n="sectionTools">正在守护的 AI 助手</span>
+        <button class="text-btn" id="btn-rescan" data-i18n="btnRescan">重新扫描</button>
+      </div>
+      <div class="card" id="tools-list">
+        <div class="empty-state" data-i18n="emptyTools">还没找到正在使用的 AI 助手</div>
+      </div>
+    </div>
+
+    <!-- Events -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title" data-i18n="sectionEvents">今天发生了什么</span>
+      </div>
+      <div class="card" id="events-list">
+        <div class="empty-state" data-i18n="emptyEvents">今天还没有任何拦截记录</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
