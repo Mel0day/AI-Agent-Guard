@@ -1,5 +1,23 @@
 node_modules/
 dist/
+dist-ssr/
 out/
 .DS_Store
+Thumbs.db
 *.log
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+# Note: src-tauri/Cargo.lock IS committed (binary crate needs reproducible builds)
+
+# Legacy Electron (reference only)
+legacy/node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# Env
+.env
+.env.local

@@ -1,0 +1,12 @@
+{
+  "name": "aisec-app",
+  "version": "0.1.0",
+  "description": "AI 守卫 — 保护你的电脑免受 AI 危险操作",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.4.11"
+  }
+}

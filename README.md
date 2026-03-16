@@ -1,57 +1,108 @@
-# AI Guard · AI 守卫
+# AI Agent Guard
 
-> A lightweight macOS menu bar app that watches your AI coding assistant and blocks dangerous actions before they happen.
->
-> 一款轻量的 macOS 菜单栏应用，实时监控 AI 编程助手的操作，在危险行为发生前将其拦截。
+A security monitor and gatekeeper for [Claude Code](https://claude.ai/code) tool executions, built with Tauri v2 (Rust + React + TypeScript).
 
----
+## What It Does
 
-## What it does
+AI Agent Guard intercepts every tool call made by Claude Code via a `PreToolUse` hook, evaluates it against 9 built-in security rules, and either blocks it automatically or prompts you for a decision.
 
-AI coding tools like Claude Code can run shell commands, delete files, and modify system configs on your behalf. Most of the time that's fine — but occasionally an AI makes a mistake, misunderstands your intent, or gets manipulated by malicious content in your codebase.
+| Risk Level | Behavior |
+|---|---|
+| **CRITICAL** | Automatically blocked immediately |
+| **WARN** | Confirmation dialog — 4s timeout auto-blocks |
+| **INFO** | Allowed and logged |
 
-**AI Guard sits in your menu bar and acts as a last line of defense:**
+## Built-in Rules
 
-- 🚨 **Auto-blocks** critical actions (e.g. `rm -rf`, writing to sensitive paths)
-- ⚠️ **Asks you to confirm** suspicious-but-not-catastrophic actions
-- ✅ **Silently allows** safe actions — no interruptions for normal work
-- 📋 **Logs everything** so you can review what your AI has been up to
+| ID | Name | Level |
+|---|---|---|
+| R001 | Destructive rm command (`rm -rf`) | CRITICAL |
+| R002 | Pipe to shell (`curl\|bash`, `wget\|sh`) | CRITICAL |
+| R003 | Access to `~/.ssh/`, `~/.aws/`, `~/.gnupg/` | CRITICAL |
+| R004 | Write to `/etc/`, `~/.bashrc`, `~/.zshrc`, `~/.profile` | CRITICAL |
+| R005 | `chmod +x` | WARN |
+| R006 | `git config --global` | WARN |
+| R007 | Access to `.env`, `.pem`, `.key`, `.p12`, `id_rsa` | WARN |
+| R008 | Write to `.claude/settings.json` | WARN |
+| R009 | External URL in bash command | INFO |
 
-## How it works
-
-AI Guard runs a local HTTP server on `127.0.0.1:47821`. AI tools that support hook-based auditing (such as Claude Code via `PreToolUse` hooks) send each tool call to this server before executing it. AI Guard evaluates the risk and responds with `{ allow: true }` or `{ allow: false }`.
+## Architecture
 
 ```
-AI Tool → PreToolUse hook → AI Guard (local server) → allow / block
+ai-guard/
+├── src-tauri/              # Rust backend (Tauri + axum)
+│   └── src/
+│       ├── main.rs         # Entry point
+│       ├── lib.rs          # Tauri commands + app setup
+│       ├── hook_server.rs  # axum HTTP server on port 47821
+│       ├── rule_engine.rs  # Rule evaluation logic
+│       ├── mcp_scanner.rs  # MCP config static analysis
+│       ├── event_logger.rs # JSONL event persistence
+│       ├── config.rs       # Config read/write
+│       └── models.rs       # Shared data types
+└── src/                    # React frontend
+    ├── App.tsx
+    ├── pages/
+    │   ├── LogWindow.tsx   # Main event log UI
+    │   ├── McpScanTab.tsx  # MCP scan results
+    │   ├── SettingsTab.tsx # Rules & settings
+    │   └── SetupWizard.tsx # First-run wizard
+    └── components/
+        ├── EventRow.tsx
+        ├── RiskBadge.tsx
+        └── ConfirmDialog.tsx
 ```
 
-The app never sends your data anywhere. Everything runs locally.
+## Data Storage
 
-## Setup
+All data is stored in `~/.aigentguard/`:
 
-### 1. Install
+- `events.jsonl` — append-only event log, one JSON object per line
+- `config.json` — app configuration (pause state, rule overrides, whitelist paths)
+
+The log file rotates at 10 MB. The in-memory ring buffer holds the 100 most recent events for fast display.
+
+## Development
+
+### Prerequisites
+
+- [Rust](https://rustup.rs/) 1.75+
+- [Node.js](https://nodejs.org/) 18+
+- [Tauri CLI v2](https://tauri.app/start/prerequisites/)
+- On macOS: Xcode Command Line Tools
+
+### Install dependencies
 
 ```bash
-git clone https://github.com/Mel0day/ai-guard.git
-cd ai-guard
 npm install
-npm start
 ```
 
-### 2. Connect Claude Code
+### Run in development mode
 
-Add a `PreToolUse` hook to your Claude Code settings (`~/.claude/settings.json`):
+```bash
+npm run tauri dev
+```
+
+### Build for production
+
+```bash
+npm run tauri build
+```
+
+## Hook Details
+
+The hook injected into `~/.claude/settings.json` looks like:
 
 ```json
 {
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST http://127.0.0.1:47821 -H 'Content-Type: application/json' -d '{\"risk\": \"'$(echo $CLAUDE_TOOL_NAME | grep -qiE 'bash|exec' && echo WARN || echo INFO)'\", \"aiDecision\": \"ALLOW\", \"toolName\": \"'$CLAUDE_TOOL_NAME'\", \"reason\": \"Tool use request\"}'"
+            "command": "RESPONSE=$(curl -s -m 4 -X POST http://127.0.0.1:47821/hook ..."
           }
         ]
       }
@@ -60,64 +111,28 @@ Add a `PreToolUse` hook to your Claude Code settings (`~/.claude/settings.json`)
 }
 ```
 
-> For a more sophisticated hook that actually analyzes the tool input and assigns risk levels, see the [ai-auditor hook](https://github.com/Mel0day/ai-guard/wiki) (coming soon).
+**Fail-open guarantee:** If this app is not running or the server is unreachable, `curl` will fail silently and Claude Code proceeds normally. The 4-second `-m` timeout ensures Claude Code's own 5-second hook timeout is never hit.
 
-### 3. Use it
+## API
 
-Launch AI Guard. It will auto-detect Claude Code if you've configured the hook. The shield icon in your menu bar shows your protection status at a glance.
+The local HTTP server (`127.0.0.1:47821`) accepts:
 
-## Features
+```
+POST /hook
+Content-Type: application/json
 
-| Feature | Details |
-|---|---|
-| **Menu bar icon** | Outline shield — green dot when safe, shows blocked count |
-| **Auto-block** | `risk: CRITICAL` or `aiDecision: BLOCK` → silently rejected |
-| **Confirm dialog** | `aiDecision: WARN` → native macOS dialog asks you to approve |
-| **Event log** | Last 10 events with timestamp, action type, tool name & input |
-| **Pause / Resume** | Temporarily disable monitoring without quitting |
-| **Daily reset** | Blocked count resets at midnight automatically |
-| **Bilingual** | Chinese and English, chosen on first launch |
-
-## Event API
-
-AI Guard accepts `POST /` with a JSON body:
-
-```json
 {
-  "risk": "CRITICAL" | "WARN" | "INFO",
-  "aiDecision": "BLOCK" | "WARN" | "ALLOW",
-  "explanation": "Human-readable reason shown in UI and notifications",
-  "toolName": "Bash",
-  "params": { "command": "rm -rf /tmp/foo" }
+  "tool_name": "Bash",
+  "tool_input": { "command": "rm -rf /" },
+  "session_id": "optional-session-id"
 }
 ```
 
 Response:
-
 ```json
-{ "allow": true }
-{ "allow": false }
+{ "allow": false, "reason": "Bash command contains 'rm -rf'..." }
 ```
-
-**Decision logic:**
-
-- `risk === CRITICAL` or `aiDecision === BLOCK` → blocked silently, notification shown
-- `aiDecision === WARN` → native confirm dialog, user decides
-- Everything else → allowed, logged silently
-
-## Requirements
-
-- macOS 12+
-- Node.js 18+
-- [Electron](https://electronjs.org) (installed via `npm install`)
-
-## Tech stack
-
-- **Electron** — native macOS app, menu bar tray
-- **Vanilla JS / HTML / CSS** — no framework, no bundler
-- **Built-in PNG generation** — shield icon drawn in code, no image assets needed
-- **`~/.aisec/config.json`** — persists settings and event history locally
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
