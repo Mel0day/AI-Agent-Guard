@@ -37,6 +37,18 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build frontend
+        run: npm run build
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -53,15 +65,3 @@ jobs:
       - name: Run Rust tests
         working-directory: src-tauri
         run: cargo test
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install frontend dependencies
-        run: npm install
-
-      - name: Build frontend
-        run: npm run build
