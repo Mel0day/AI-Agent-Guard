@@ -74,21 +74,22 @@ Download the latest release for your platform from the [Releases](https://github
 | Linux (Debian/Ubuntu) | `AI.Agent.Guard_x.x.x_amd64.deb` |
 | Linux (AppImage) | `AI.Agent.Guard_x.x.x_amd64.AppImage` |
 
-### macOS: "App is damaged" / Gatekeeper warning
+### macOS: Gatekeeper warning
 
-Because the app is not signed with an Apple Developer certificate, macOS Gatekeeper will block it on first launch. This is expected for open-source apps distributed outside the App Store.
+The app is ad-hoc signed but not notarized with an Apple Developer certificate, so macOS will block it on first launch. There are two possible warnings depending on your macOS version:
 
-**Option A — System Settings (recommended)**
+**"AI Agent Guard" cannot be opened because it is from an unidentified developer**
 
 1. Double-click the `.dmg` and drag the app to `/Applications`
-2. Try to open the app — macOS will show a warning and block it
+2. Try to open the app — macOS blocks it with this warning
 3. Open **System Settings → Privacy & Security**
 4. Scroll to the **Security** section — you will see:
    > *"AI Agent Guard" was blocked from use because it is not from an identified developer.*
-5. Click **Open Anyway**
-6. Click **Open** in the confirmation dialog
+5. Click **Open Anyway**, then click **Open** in the confirmation dialog
 
-**Option B — Terminal (one command)**
+**"AI Agent Guard" is damaged and can't be opened**
+
+This means macOS quarantined the download. The Privacy & Security screen will not show an "Open Anyway" button for this error — use the terminal instead:
 
 ```bash
 xattr -cr /Applications/AI\ Agent\ Guard.app
