@@ -38,10 +38,8 @@ impl SharedState {
         }
 
         let pause_until = config.pause_until;
-        let is_paused = config.is_paused
-            && pause_until
-                .map(|until| Utc::now() < until)
-                .unwrap_or(true); // no expiry = pause indefinitely
+        let is_paused =
+            config.is_paused && pause_until.map(|until| Utc::now() < until).unwrap_or(true); // no expiry = pause indefinitely
 
         SharedState {
             app_state: RwLock::new(AppState {
@@ -90,14 +88,16 @@ pub fn run() {
             });
 
             // ── System tray ──────────────────────────────────────────────────
-            let show_item = MenuItem::with_id(app, "show", "Show AI Agent Guard", true, None::<&str>)?;
-            let pause_item = MenuItem::with_id(app, "pause", "Pause Protection", true, None::<&str>)?;
+            let show_item =
+                MenuItem::with_id(app, "show", "Show AI Agent Guard", true, None::<&str>)?;
+            let pause_item =
+                MenuItem::with_id(app, "pause", "Pause Protection", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_item, &pause_item, &quit_item])?;
 
             TrayIconBuilder::new()
                 .icon(tauri::include_image!("icons/tray-icon.png"))
-                .icon_as_template(true)   // macOS: adapts to dark/light menu bar
+                .icon_as_template(true) // macOS: adapts to dark/light menu bar
                 .tooltip("AI Agent Guard — Protecting Claude Code")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
@@ -206,7 +206,10 @@ pub fn run() {
 
                     match mcp_scanner::scan_mcp_configs() {
                         Ok(items) => {
-                            tracing::info!("MCP config changed — rescan found {} issue(s)", items.len());
+                            tracing::info!(
+                                "MCP config changed — rescan found {} issue(s)",
+                                items.len()
+                            );
                             let _ = handle_watch.emit("mcp_scan_updated", &items);
                         }
                         Err(e) => tracing::warn!("MCP rescan failed: {}", e),

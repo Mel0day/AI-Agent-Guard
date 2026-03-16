@@ -1,13 +1,7 @@
 use crate::models::{Event, HookPayload, HookResponse, Outcome, RiskLevel};
 use crate::rule_engine;
 use crate::SharedState;
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Json,
-    routing::post,
-    Router,
-};
+use axum::{extract::State, http::StatusCode, response::Json, routing::post, Router};
 use chrono::Utc;
 use std::sync::Arc;
 use tauri::Emitter;

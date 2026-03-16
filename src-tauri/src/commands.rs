@@ -1,6 +1,6 @@
 use crate::config::save_config;
-use crate::models::{AppState, Event, EventFilter, McpScanItem, RiskLevel, Rule};
 use crate::mcp_scanner;
+use crate::models::{AppState, Event, EventFilter, McpScanItem, RiskLevel, Rule};
 use crate::SharedState;
 use chrono::{Duration, Utc};
 use std::sync::Arc;

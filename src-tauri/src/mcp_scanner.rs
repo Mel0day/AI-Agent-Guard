@@ -29,7 +29,8 @@ const MAX_DESC_LEN: usize = 500;
 pub fn scan_mcp_configs() -> Result<Vec<McpScanItem>> {
     let mut results = Vec::new();
 
-    let home = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Cannot determine home directory"))?;
+    let home =
+        dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Cannot determine home directory"))?;
 
     // Scan Claude Desktop config
     let claude_config = home.join(".claude").join("claude_desktop_config.json");

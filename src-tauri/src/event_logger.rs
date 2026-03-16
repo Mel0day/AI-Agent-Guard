@@ -49,7 +49,10 @@ impl EventLogger {
         writeln!(file, "{}", line).context("Failed to write event to log")?;
 
         // Update ring buffer
-        let mut buf = self.ring_buffer.lock().map_err(|e| anyhow::anyhow!("Lock poisoned: {}", e))?;
+        let mut buf = self
+            .ring_buffer
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Lock poisoned: {}", e))?;
         buf.push_back(event.clone());
         while buf.len() > RING_BUFFER_SIZE {
             buf.pop_front();
@@ -60,7 +63,10 @@ impl EventLogger {
 
     /// Get the most recent n events from the ring buffer (fast path)
     pub fn get_recent(&self, n: usize) -> Result<Vec<Event>> {
-        let buf = self.ring_buffer.lock().map_err(|e| anyhow::anyhow!("Lock poisoned: {}", e))?;
+        let buf = self
+            .ring_buffer
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Lock poisoned: {}", e))?;
         let take = n.min(buf.len());
         let events: Vec<Event> = buf.iter().rev().take(take).cloned().collect();
         Ok(events)
@@ -73,7 +79,10 @@ impl EventLogger {
 
         // If offset is within ring buffer range, use it
         if offset < RING_BUFFER_SIZE {
-            let buf = self.ring_buffer.lock().map_err(|e| anyhow::anyhow!("Lock poisoned: {}", e))?;
+            let buf = self
+                .ring_buffer
+                .lock()
+                .map_err(|e| anyhow::anyhow!("Lock poisoned: {}", e))?;
             let all: Vec<Event> = buf.iter().rev().cloned().collect();
             drop(buf);
 
@@ -93,7 +102,12 @@ impl EventLogger {
         self.query_from_file(filter, limit, offset)
     }
 
-    fn query_from_file(&self, filter: &EventFilter, limit: usize, offset: usize) -> Result<Vec<Event>> {
+    fn query_from_file(
+        &self,
+        filter: &EventFilter,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<Event>> {
         if !self.log_path.exists() {
             return Ok(Vec::new());
         }
@@ -148,7 +162,10 @@ impl EventLogger {
             all_lines = all_lines.split_off(all_lines.len() - RING_BUFFER_SIZE);
         }
 
-        let mut buf = self.ring_buffer.lock().map_err(|e| anyhow::anyhow!("Lock poisoned: {}", e))?;
+        let mut buf = self
+            .ring_buffer
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Lock poisoned: {}", e))?;
         for line in all_lines {
             if let Ok(event) = serde_json::from_str::<Event>(&line) {
                 buf.push_back(event);
@@ -192,7 +209,11 @@ fn matches_filter(event: &Event, filter: &EventFilter) -> bool {
         let search_lower = search.to_lowercase();
         let tool_match = event.tool_name.to_lowercase().contains(&search_lower);
         let reason_match = event.reason.to_lowercase().contains(&search_lower);
-        let input_match = event.tool_input.to_string().to_lowercase().contains(&search_lower);
+        let input_match = event
+            .tool_input
+            .to_string()
+            .to_lowercase()
+            .contains(&search_lower);
         let rule_match = event
             .rule_name
             .as_deref()

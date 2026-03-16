@@ -111,7 +111,14 @@ fn extract_file_paths(tool_input: &serde_json::Value) -> Vec<String> {
     let mut paths = Vec::new();
 
     // Common path field names used by Claude Code tools
-    for field in &["path", "file_path", "filename", "filepath", "target", "source"] {
+    for field in &[
+        "path",
+        "file_path",
+        "filename",
+        "filepath",
+        "target",
+        "source",
+    ] {
         if let Some(p) = tool_input.get(field).and_then(|v| v.as_str()) {
             paths.push(p.to_string());
         }
@@ -146,8 +153,15 @@ fn extract_file_paths(tool_input: &serde_json::Value) -> Vec<String> {
 fn is_write_tool(tool_name: &str) -> bool {
     matches!(
         tool_name,
-        "Write" | "write_file" | "Edit" | "edit_file" | "MultiEdit" | "create_file"
-            | "write" | "patch_file" | "insert_content"
+        "Write"
+            | "write_file"
+            | "Edit"
+            | "edit_file"
+            | "MultiEdit"
+            | "create_file"
+            | "write"
+            | "patch_file"
+            | "insert_content"
     )
 }
 
@@ -173,7 +187,10 @@ fn url_re() -> &'static Regex {
 /// Returns true if the captured host is a loopback/local address.
 fn is_local_host(host: &str) -> bool {
     let h = host.split(':').next().unwrap_or(host).to_lowercase();
-    matches!(h.as_str(), "localhost" | "127.0.0.1" | "0.0.0.0" | "::1" | "[::1]")
+    matches!(
+        h.as_str(),
+        "localhost" | "127.0.0.1" | "0.0.0.0" | "::1" | "[::1]"
+    )
 }
 
 /// Returns true if the text contains at least one external (non-local) URL.
@@ -210,7 +227,10 @@ pub fn evaluate(
 
     for rule in rules {
         // Apply overrides
-        let enabled = rule_overrides.get(&rule.id).copied().unwrap_or(rule.enabled);
+        let enabled = rule_overrides
+            .get(&rule.id)
+            .copied()
+            .unwrap_or(rule.enabled);
         if !enabled {
             continue;
         }
@@ -234,10 +254,7 @@ pub fn evaluate(
                     Err(_) => continue,
                 };
                 // Check bash command text for path references
-                let in_cmd = bash_cmd
-                    .as_deref()
-                    .map(|c| re.is_match(c))
-                    .unwrap_or(false);
+                let in_cmd = bash_cmd.as_deref().map(|c| re.is_match(c)).unwrap_or(false);
                 // Check explicit file paths
                 let in_paths = file_paths.iter().any(|p| {
                     let expanded = expand_tilde(p);
