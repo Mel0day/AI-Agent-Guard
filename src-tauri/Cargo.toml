@@ -1,6 +1,6 @@
 [package]
 name = "ai-agent-guard"
-version = "0.1.0"
+version = "0.2.0"
 description = "AI Agent Guard - Claude Code Hook Security Monitor"
 authors = ["AI Agent Guard Contributors"]
 license = "MIT"
