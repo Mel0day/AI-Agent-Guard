@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { AppState, Event, EventFilter, McpScanItem, RiskLevel, Rule } from "../types";
+import type { AppState, Event, EventFilter, McpScanItem, McpScanEntry, RiskLevel, Rule } from "../types";
 import EventRow from "../components/EventRow";
 import RiskBadge from "../components/RiskBadge";
 import McpScanTab from "./McpScanTab";
@@ -34,7 +34,7 @@ export default function LogWindow() {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mcpItems, setMcpItems] = useState<McpScanItem[]>([]);
+  const [mcpHistory, setMcpHistory] = useState<McpScanEntry[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -159,13 +159,32 @@ export default function LogWindow() {
   useEffect(() => {
     if (tab === "mcp") {
       invoke<McpScanItem[]>("get_mcp_scan_result")
-        .then(setMcpItems)
+        .then((items) => {
+          setMcpHistory((prev) => {
+            // Only add if different from the last entry
+            const last = prev[0];
+            if (last && JSON.stringify(last.items) === JSON.stringify(items)) return prev;
+            return [{ scanned_at: new Date().toISOString(), items }, ...prev];
+          });
+        })
         .catch(console.error);
     }
     if (tab === "settings") {
       invoke<Rule[]>("get_rules").then(setRules).catch(console.error);
     }
   }, [tab]);
+
+  // Listen for MCP scan updates (startup scan + file watcher)
+  useEffect(() => {
+    const unlisten = listen<McpScanItem[]>("mcp_scan_updated", (evt) => {
+      setMcpHistory((prev) => {
+        const last = prev[0];
+        if (last && JSON.stringify(last.items) === JSON.stringify(evt.payload)) return prev;
+        return [{ scanned_at: new Date().toISOString(), items: evt.payload }, ...prev];
+      });
+    });
+    return () => { unlisten.then((f) => f()); };
+  }, []);
 
   async function handlePause(minutes?: number) {
     try {
@@ -271,9 +290,9 @@ export default function LogWindow() {
             {t === "mcp" && (
               <span className="flex items-center gap-1.5">
                 MCP Scan
-                {mcpItems.length > 0 && (
+                {(mcpHistory[0]?.items.length ?? 0) > 0 && (
                   <span className="bg-orange-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                    {mcpItems.length}
+                    {mcpHistory[0].items.length}
                   </span>
                 )}
               </span>
@@ -388,7 +407,19 @@ export default function LogWindow() {
           </div>
         )}
 
-        {tab === "mcp" && <McpScanTab items={mcpItems} />}
+        {tab === "mcp" && (
+          <McpScanTab
+            history={mcpHistory}
+            onRescan={async () => {
+              const items = await invoke<McpScanItem[]>("get_mcp_scan_result");
+              setMcpHistory((prev) => {
+                const last = prev[0];
+                if (last && JSON.stringify(last.items) === JSON.stringify(items)) return prev;
+                return [{ scanned_at: new Date().toISOString(), items }, ...prev];
+              });
+            }}
+          />
+        )}
         {tab === "settings" && (
           <SettingsTab
             rules={rules}

@@ -12,6 +12,8 @@ use crate::models::{AppState, Config, PendingDecision, Rule};
 use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager};
 use tokio::sync::{Mutex, RwLock};
 
@@ -86,6 +88,132 @@ pub fn run() {
                     tracing::error!("Hook server failed: {}", e);
                 }
             });
+
+            // ── System tray ──────────────────────────────────────────────────
+            let show_item = MenuItem::with_id(app, "show", "Show AI Agent Guard", true, None::<&str>)?;
+            let pause_item = MenuItem::with_id(app, "pause", "Pause Protection", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_item, &pause_item, &quit_item])?;
+
+            TrayIconBuilder::new()
+                .icon(tauri::include_image!("icons/tray-icon.png"))
+                .icon_as_template(true)   // macOS: adapts to dark/light menu bar
+                .tooltip("AI Agent Guard — Protecting Claude Code")
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        // Left-click: show/focus main window
+                        if let Some(window) = tray.app_handle().get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "pause" => {
+                        let _ = app.emit("tray_pause_clicked", ());
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .build(app)?;
+            // ─────────────────────────────────────────────────────────────────
+
+            // ── Startup MCP scan ─────────────────────────────────────────────
+            let handle_startup = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                // Small delay so the frontend has time to mount its event listener
+                tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
+                if let Ok(items) = mcp_scanner::scan_mcp_configs() {
+                    if !items.is_empty() {
+                        let _ = handle_startup.emit("mcp_scan_updated", &items);
+                    }
+                }
+            });
+
+            // ── MCP config file watcher ───────────────────────────────────────
+            let handle_watch = app.handle().clone();
+            std::thread::spawn(move || {
+                use notify::{EventKind, RecursiveMode, Watcher};
+                use std::sync::mpsc;
+                use std::time::{Duration, Instant};
+
+                let (tx, rx) = mpsc::channel();
+                let mut watcher = match notify::recommended_watcher(tx) {
+                    Ok(w) => w,
+                    Err(e) => {
+                        tracing::error!("MCP file watcher init failed: {}", e);
+                        return;
+                    }
+                };
+
+                let home = match dirs::home_dir() {
+                    Some(h) => h,
+                    None => return,
+                };
+
+                // Watch parent dirs (NonRecursive) so we catch file creation too
+                for dir in [home.join(".claude"), home.join(".cursor")] {
+                    if dir.exists() {
+                        if let Err(e) = watcher.watch(&dir, RecursiveMode::NonRecursive) {
+                            tracing::warn!("Cannot watch {:?}: {}", dir, e);
+                        } else {
+                            tracing::info!("Watching {:?} for MCP config changes", dir);
+                        }
+                    }
+                }
+
+                let mut last_scan = Instant::now() - Duration::from_secs(10);
+
+                for event in rx.into_iter().flatten() {
+                    // Only care about write/create/remove events on the two config files
+                    let is_relevant = matches!(
+                        event.kind,
+                        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+                    ) && event.paths.iter().any(|p| {
+                        matches!(
+                            p.file_name().and_then(|n| n.to_str()),
+                            Some("claude_desktop_config.json") | Some("mcp.json")
+                        )
+                    });
+
+                    if !is_relevant {
+                        continue;
+                    }
+
+                    // Debounce: ignore events within 2s of the last scan
+                    if last_scan.elapsed() < Duration::from_secs(2) {
+                        continue;
+                    }
+                    last_scan = Instant::now();
+
+                    // Short settle delay so the file write is complete
+                    std::thread::sleep(Duration::from_millis(300));
+
+                    match mcp_scanner::scan_mcp_configs() {
+                        Ok(items) => {
+                            tracing::info!("MCP config changed — rescan found {} issue(s)", items.len());
+                            let _ = handle_watch.emit("mcp_scan_updated", &items);
+                        }
+                        Err(e) => tracing::warn!("MCP rescan failed: {}", e),
+                    }
+                }
+            });
+            // ─────────────────────────────────────────────────────────────────
 
             // Show setup wizard if hook is not yet injected
             check_and_show_setup(app);

@@ -51,6 +51,11 @@ export interface McpScanItem {
   severity: RiskLevel;
 }
 
+export interface McpScanEntry {
+  scanned_at: string; // ISO 8601
+  items: McpScanItem[];
+}
+
 export interface EventFilter {
   risk_level?: RiskLevel;
   search?: string;
