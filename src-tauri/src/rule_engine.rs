@@ -169,7 +169,11 @@ fn is_write_tool(tool_name: &str) -> bool {
 fn expand_tilde(path: &str) -> String {
     if path.starts_with("~/") {
         if let Some(home) = dirs::home_dir() {
-            return format!("{}/{}", home.display(), path.strip_prefix("~/").unwrap_or(path));
+            return format!(
+                "{}/{}",
+                home.display(),
+                path.strip_prefix("~/").unwrap_or(path)
+            );
         }
     }
     path.to_string()

@@ -114,7 +114,6 @@ pub struct AppState {
     pub last_event_at: Option<DateTime<Utc>>,
 }
 
-
 /// Filter for querying events
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct EventFilter {
@@ -143,7 +142,6 @@ pub struct Config {
     /// Paths that are always allowed
     pub whitelist_paths: Vec<String>,
 }
-
 
 /// Pending WARN decision, waiting for user confirmation
 #[derive(Debug)]
