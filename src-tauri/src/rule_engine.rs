@@ -137,10 +137,10 @@ fn extract_file_paths(tool_input: &serde_json::Value) -> Vec<String> {
     if let Some(obj) = tool_input.as_object() {
         for (_, v) in obj {
             if let Some(s) = v.as_str() {
-                if s.starts_with('/') || s.starts_with("~/") || s.starts_with("./") {
-                    if !paths.contains(&s.to_string()) {
-                        paths.push(s.to_string());
-                    }
+                if (s.starts_with('/') || s.starts_with("~/") || s.starts_with("./"))
+                    && !paths.contains(&s.to_string())
+                {
+                    paths.push(s.to_string());
                 }
             }
         }
@@ -169,7 +169,7 @@ fn is_write_tool(tool_name: &str) -> bool {
 fn expand_tilde(path: &str) -> String {
     if path.starts_with("~/") {
         if let Some(home) = dirs::home_dir() {
-            return format!("{}/{}", home.display(), &path[2..]);
+            return format!("{}/{}", home.display(), path.strip_prefix("~/").unwrap_or(path));
         }
     }
     path.to_string()

@@ -153,7 +153,7 @@ impl EventLogger {
 
         let mut all_lines: Vec<String> = reader
             .lines()
-            .filter_map(|l| l.ok())
+            .map_while(Result::ok)
             .filter(|l| !l.trim().is_empty())
             .collect();
 

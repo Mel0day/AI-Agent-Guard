@@ -105,7 +105,7 @@ pub struct Event {
 }
 
 /// Application runtime state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AppState {
     pub is_paused: bool,
     pub pause_until: Option<DateTime<Utc>>,
@@ -114,17 +114,6 @@ pub struct AppState {
     pub last_event_at: Option<DateTime<Utc>>,
 }
 
-impl Default for AppState {
-    fn default() -> Self {
-        AppState {
-            is_paused: false,
-            pause_until: None,
-            today_protected: 0,
-            today_blocked: 0,
-            last_event_at: None,
-        }
-    }
-}
 
 /// Filter for querying events
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -145,7 +134,7 @@ pub struct McpScanItem {
 }
 
 /// Persistent configuration stored in ~/.aigentguard/config.json
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     pub is_paused: bool,
     pub pause_until: Option<DateTime<Utc>>,
@@ -155,16 +144,6 @@ pub struct Config {
     pub whitelist_paths: Vec<String>,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            is_paused: false,
-            pause_until: None,
-            rule_overrides: HashMap::new(),
-            whitelist_paths: Vec::new(),
-        }
-    }
-}
 
 /// Pending WARN decision, waiting for user confirmation
 #[derive(Debug)]
