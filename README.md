@@ -62,6 +62,42 @@ All data is stored in `~/.aigentguard/`:
 
 The log file rotates at 10 MB. The in-memory ring buffer holds the 100 most recent events for fast display.
 
+## Installation
+
+Download the latest release for your platform from the [Releases](https://github.com/Mel0day/AI-Agent-Guard/releases) page.
+
+| Platform | File |
+|---|---|
+| macOS Apple Silicon | `AI.Agent.Guard_x.x.x_aarch64.dmg` |
+| macOS Intel | `AI.Agent.Guard_x.x.x_x64.dmg` |
+| Windows | `AI.Agent.Guard_x.x.x_x64-setup.exe` |
+| Linux (Debian/Ubuntu) | `AI.Agent.Guard_x.x.x_amd64.deb` |
+| Linux (AppImage) | `AI.Agent.Guard_x.x.x_amd64.AppImage` |
+
+### macOS: "App is damaged" / Gatekeeper warning
+
+Because the app is not signed with an Apple Developer certificate, macOS Gatekeeper will block it on first launch. This is expected for open-source apps distributed outside the App Store.
+
+**Option A — System Settings (recommended)**
+
+1. Double-click the `.dmg` and drag the app to `/Applications`
+2. Try to open the app — macOS will show a warning and block it
+3. Open **System Settings → Privacy & Security**
+4. Scroll to the **Security** section — you will see:
+   > *"AI Agent Guard" was blocked from use because it is not from an identified developer.*
+5. Click **Open Anyway**
+6. Click **Open** in the confirmation dialog
+
+**Option B — Terminal (one command)**
+
+```bash
+xattr -cr /Applications/AI\ Agent\ Guard.app
+```
+
+Then open the app normally. This removes the quarantine attribute macOS added when you downloaded the file.
+
+---
+
 ## Development
 
 ### Prerequisites
